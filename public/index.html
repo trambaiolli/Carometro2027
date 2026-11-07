@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Carômetro de Alunos</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Carômetro de Alunos</h1>
+      <input
+        id="busca"
+        type="search"
+        placeholder="Buscar aluno por nome, email ou telefone..."
+      />
+      <nav id="tabs"></nav>
+      <div><button id="novo" class="primario">+ Novo aluno</button></div>
+    </header>
+    <main id="grid"></main>
+    <dialog id="dlg">
+      <form id="form" method="dialog">
+        <h2 id="dlgTitulo"></h2>
+        <label>Nome <input name="nome" required maxlength="120" /></label>
+        <label
+          >Email <input name="email" type="email" required maxlength="150"
+        /></label>
+        <label
+          >Telefone <input name="telefone" required maxlength="20"
+        /></label>
+        <label
+          >Foto (URL ou câmera)
+          <input name="foto_url" placeholder="https://... ou use a câmera"
+        /></label>
+        <video id="video" autoplay playsinline muted hidden></video>
+        <img id="preview" alt="Pré-visualização" hidden />
+        <div class="acoes camera">
+          <button type="button" id="abrirCam">Usar câmera</button>
+          <button type="button" id="capturar" class="primario" hidden>
+            Capturar
+          </button>
+        </div>
+        <label
+          >Turma
+          <select name="turma_id" required></select
+        ></label>
+        <p id="erro" class="erro"></p>
+        <div class="acoes">
+          <button type="button" id="cancelar">Cancelar</button>
+          <button type="submit" class="primario">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+    <script src="app.js"></script>
+  </body>
+</html>
