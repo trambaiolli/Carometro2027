@@ -15,9 +15,35 @@
         placeholder="Buscar aluno por nome, email ou telefone..."
       />
       <nav id="tabs"></nav>
-      <div><button id="novo" class="primario">+ Novo aluno</button></div>
+      <div class="acoesTopo">
+        <button id="consultarTurmas">Consultar turmas</button>
+        <button id="gerarTurma">Gerar turma</button>
+        <button id="editarTurma" hidden>Editar nome</button>
+        <button id="excluirTurma" hidden>Excluir turma</button>
+        <button id="novo" class="primario">+ Novo aluno</button>
+      </div>
     </header>
     <main id="grid"></main>
+    <dialog id="listaTurmasDialog" class="listaTurmasDialog">
+      <div class="cabecalhoListaTurmas">
+        <h2>Todas as turmas</h2>
+        <button id="fecharListaTurmas" type="button" aria-label="Fechar">
+          Fechar
+        </button>
+      </div>
+      <div class="tabelaTurmas">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Turma</th>
+              <th scope="col">Alunos</th>
+              <th scope="col"><span class="sr-only">Ação</span></th>
+            </tr>
+          </thead>
+          <tbody id="listaTurmas"></tbody>
+        </table>
+      </div>
+    </dialog>
     <dialog id="dlg">
       <form id="form" method="dialog">
         <h2 id="dlgTitulo"></h2>

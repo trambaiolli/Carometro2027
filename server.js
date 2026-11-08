@@ -44,12 +44,101 @@ app.post('/api/fotos', (req, res) => {
 app.get('/api/turmas', async (req, res) => {
   try {
     const [rows] = await pool.query(
-      'SELECT id, nome FROM turmas ORDER BY nome'
+      `SELECT t.id, t.nome, COUNT(a.id) AS total_alunos
+       FROM turmas t
+       LEFT JOIN alunos a ON a.turma_id = t.id
+       GROUP BY t.id, t.nome
+       ORDER BY t.nome`
     );
     res.json(rows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ erro: 'Erro ao buscar turmas' });
+  }
+});
+
+app.post('/api/turmas', async (req, res) => {
+  const nome = String(req.body.nome || '').trim();
+  if (!nome || nome.length > 50)
+    return res
+      .status(400)
+      .json({ erro: 'Informe um nome de até 50 caracteres' });
+
+  try {
+    const [result] = await pool.query('INSERT INTO turmas (nome) VALUES (?)', [
+      nome,
+    ]);
+    res.status(201).json({ id: result.insertId, nome });
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY')
+      return res
+        .status(409)
+        .json({ erro: 'Já existe uma turma com esse nome' });
+    console.error(err);
+    res.status(500).json({ erro: 'Erro ao gerar turma' });
+  }
+});
+
+app.put('/api/turmas/:id', async (req, res) => {
+  const turmaId = Number(req.params.id);
+  const nome = String(req.body.nome || '').trim();
+  if (!Number.isInteger(turmaId) || turmaId <= 0)
+    return res.status(400).json({ erro: 'Turma inválida' });
+  if (!nome || nome.length > 50)
+    return res
+      .status(400)
+      .json({ erro: 'Informe um nome de até 50 caracteres' });
+
+  try {
+    const [result] = await pool.query(
+      'UPDATE turmas SET nome = ? WHERE id = ?',
+      [nome, turmaId]
+    );
+    if (!result.affectedRows)
+      return res.status(404).json({ erro: 'Turma não encontrada' });
+    res.json({ id: turmaId, nome });
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY')
+      return res
+        .status(409)
+        .json({ erro: 'Já existe uma turma com esse nome' });
+    console.error(err);
+    res.status(500).json({ erro: 'Erro ao renomear turma' });
+  }
+});
+
+app.delete('/api/turmas/:id', async (req, res) => {
+  const turmaId = Number(req.params.id);
+  if (!Number.isInteger(turmaId) || turmaId <= 0)
+    return res.status(400).json({ erro: 'Turma inválida' });
+
+  let connection;
+  try {
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+    const [turmas] = await connection.query(
+      'SELECT id FROM turmas WHERE id = ? FOR UPDATE',
+      [turmaId]
+    );
+    if (!turmas.length) {
+      await connection.rollback();
+      return res.status(404).json({ erro: 'Turma não encontrada' });
+    }
+
+    await connection.query('DELETE FROM alunos WHERE turma_id = ?', [turmaId]);
+    await connection.query('DELETE FROM turmas WHERE id = ?', [turmaId]);
+    await connection.commit();
+    res.status(204).end();
+  } catch (err) {
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch {}
+    }
+    console.error(err);
+    res.status(500).json({ erro: 'Erro ao excluir turma' });
+  } finally {
+    if (connection) connection.release();
   }
 });
 

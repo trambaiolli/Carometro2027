@@ -124,8 +124,86 @@ header p {
   cursor: pointer;
   font-size: 13px;
 }
-#novo {
+.acoesTopo {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 16px;
+}
+.acoesTopo button:not(.primario) {
+  padding: 8px 18px;
+  border: 1px solid #c9cdea;
+  border-radius: 999px;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+  font-size: 13px;
+}
+.acoesTopo #excluirTurma {
+  color: #a93226;
+  border-color: #e6b0aa;
+}
+.acoesTopo #excluirTurma[hidden] {
+  display: none;
+}
+.acoesTopo button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+.listaTurmasDialog {
+  width: min(560px, 92vw);
+  max-height: 80vh;
+  overflow: auto;
+}
+.cabecalhoListaTurmas {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.cabecalhoListaTurmas h2 {
+  margin: 0;
+}
+.cabecalhoListaTurmas button,
+.verTurma {
+  border: 1px solid #c9cdea;
+  border-radius: 6px;
+  background: #fff;
+  padding: 7px 12px;
+  cursor: pointer;
+}
+.tabelaTurmas {
+  overflow-x: auto;
+}
+.tabelaTurmas table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.tabelaTurmas th,
+.tabelaTurmas td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #e1e3ee;
+}
+.tabelaTurmas th {
+  color: #555;
+  font-size: 12px;
+}
+.tabelaTurmas .totalAlunos {
+  text-align: center;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .acoesCard {
   display: flex;

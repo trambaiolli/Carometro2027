@@ -54,8 +54,11 @@ async function carregarAlunos() {
 
 function aba(label, id) {
   const b = el('button', id === turmaAtual ? 'ativo' : '', label);
+  b.dataset.turmaId = id;
   b.onclick = () => {
     turmaAtual = id;
+    document.getElementById('editarTurma').hidden = !id;
+    document.getElementById('excluirTurma').hidden = !id;
     tabs
       .querySelectorAll('button')
       .forEach((x) => x.classList.toggle('ativo', x === b));
@@ -64,9 +67,27 @@ function aba(label, id) {
   return b;
 }
 
+function atualizarTurmas(turmas) {
+  form.turma_id.replaceChildren(
+    ...turmas.map((t) => {
+      const o = el('option', '', t.nome);
+      o.value = t.id;
+      return o;
+    })
+  );
+  tabs.replaceChildren(
+    aba('Todas', ''),
+    ...turmas.map((t) => aba(t.nome, String(t.id)))
+  );
+  document.getElementById('editarTurma').hidden = !turmaAtual;
+  document.getElementById('excluirTurma').hidden = !turmaAtual;
+}
+
 const dlg = document.getElementById('dlg');
 const form = document.getElementById('form');
 const erro = document.getElementById('erro');
+const listaTurmasDialog = document.getElementById('listaTurmasDialog');
+const listaTurmas = document.getElementById('listaTurmas');
 let editandoId = null;
 
 const video = document.getElementById('video');
@@ -166,21 +187,143 @@ form.addEventListener('submit', async (e) => {
 });
 
 document.getElementById('cancelar').onclick = () => dlg.close();
+document.getElementById('fecharListaTurmas').onclick = () =>
+  listaTurmasDialog.close();
+document.getElementById('consultarTurmas').onclick = async () => {
+  try {
+    const resposta = await fetch('/api/turmas');
+    if (!resposta.ok) throw new Error('Erro ao consultar turmas');
+    const turmas = await resposta.json();
+
+    listaTurmas.replaceChildren(
+      ...(turmas.length
+        ? turmas.map((turma) => {
+            const linha = el('tr');
+            const acao = el('td');
+            const abrir = el('button', 'verTurma', 'Ver turma');
+            abrir.type = 'button';
+            abrir.onclick = () => {
+              const botaoAba = [...tabs.querySelectorAll('button')].find(
+                (botao) => botao.dataset.turmaId === String(turma.id)
+              );
+              botaoAba?.click();
+              listaTurmasDialog.close();
+            };
+            acao.append(abrir);
+            linha.append(
+              el('td', '', turma.nome),
+              el('td', 'totalAlunos', String(turma.total_alunos)),
+              acao
+            );
+            return linha;
+          })
+        : [
+            (() => {
+              const linha = el('tr');
+              linha.append(el('td', 'vazio', 'Nenhuma turma cadastrada.'));
+              linha.firstChild.colSpan = 3;
+              return linha;
+            })(),
+          ])
+    );
+    listaTurmasDialog.showModal();
+  } catch (err) {
+    alert(err.message || 'Não foi possível consultar as turmas.');
+  }
+};
 document.getElementById('novo').onclick = () => abrirForm(null);
+document.getElementById('editarTurma').onclick = async (e) => {
+  const id = turmaAtual;
+  const botao = e.currentTarget;
+  const abaAtual = tabs.querySelector('button.ativo');
+  if (!id || !abaAtual) return;
+
+  const nome = prompt('Novo nome da turma:', abaAtual.textContent);
+  if (nome === null || !nome.trim()) return;
+
+  botao.disabled = true;
+  try {
+    const resposta = await fetch('/api/turmas/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome: nome.trim() }),
+    });
+    const resultado = await resposta.json();
+    if (!resposta.ok)
+      throw new Error(resultado.erro || 'Erro ao renomear turma');
+
+    const turmas = await (await fetch('/api/turmas')).json();
+    atualizarTurmas(turmas);
+    carregarAlunos();
+  } catch (err) {
+    alert(err.message || 'Não foi possível renomear a turma.');
+  } finally {
+    botao.disabled = false;
+  }
+};
+document.getElementById('excluirTurma').onclick = async (e) => {
+  const id = turmaAtual;
+  const botao = e.currentTarget;
+  const nome = tabs.querySelector('button.ativo')?.textContent || 'esta turma';
+  if (
+    !id ||
+    !confirm(
+      `Excluir ${nome} e todos os alunos cadastrados nela? Esta ação não pode ser desfeita.`
+    )
+  )
+    return;
+
+  botao.disabled = true;
+  try {
+    const resposta = await fetch('/api/turmas/' + id, { method: 'DELETE' });
+    if (!resposta.ok) {
+      const resultado = await resposta.json();
+      throw new Error(resultado.erro || 'Erro ao excluir turma');
+    }
+
+    turmaAtual = '';
+    const turmas = await (await fetch('/api/turmas')).json();
+    atualizarTurmas(turmas);
+    carregarAlunos();
+  } catch (err) {
+    alert(err.message || 'Não foi possível excluir a turma.');
+  } finally {
+    botao.disabled = false;
+  }
+};
+document.getElementById('gerarTurma').onclick = async (e) => {
+  const botao = e.currentTarget;
+  const nome = prompt('Nome da nova turma:');
+  if (nome === null) return;
+  if (!nome.trim()) {
+    alert('Informe o nome da turma.');
+    return;
+  }
+
+  botao.disabled = true;
+  try {
+    const resposta = await fetch('/api/turmas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome: nome.trim() }),
+    });
+    const resultado = await resposta.json();
+    if (!resposta.ok) throw new Error(resultado.erro || 'Erro ao gerar turma');
+
+    const turmas = await (await fetch('/api/turmas')).json();
+    turmaAtual = String(resultado.id);
+    atualizarTurmas(turmas);
+    carregarAlunos();
+  } catch (err) {
+    alert(err.message || 'Não foi possível gerar a turma.');
+  } finally {
+    botao.disabled = false;
+  }
+};
 
 async function init() {
   const turmas = await (await fetch('/api/turmas')).json();
-  form.turma_id.replaceChildren(
-    ...turmas.map((t) => {
-      const o = el('option', '', t.nome);
-      o.value = t.id;
-      return o;
-    })
-  );
-  tabs.append(
-    aba('Todas', ''),
-    ...turmas.map((t) => aba(t.nome, String(t.id)))
-  );
+  atualizarTurmas(turmas);
   busca.addEventListener('input', () => {
     clearTimeout(timer);
     timer = setTimeout(carregarAlunos, 250);
