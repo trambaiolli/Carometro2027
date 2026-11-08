@@ -4,6 +4,8 @@ const mysql = require('mysql2/promise');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const session = require('express-session');
+const { rateLimit } = require('express-rate-limit');
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
@@ -17,12 +19,131 @@ const pool = mysql.createPool({
 
 const app = express();
 app.use(express.json({ limit: '5mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
 
 const UPLOAD_DIR = path.join(__dirname, 'public', 'uploads');
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-app.post('/api/fotos', (req, res) => {
+const usuarios = [
+  {
+    nome: process.env.ADMIN_USERNAME || 'adm',
+    senha: process.env.ADMIN_PASSWORD || '',
+    perfil: 'admin',
+  },
+  {
+    nome: process.env.VISITOR_USERNAME || 'visitante',
+    senha: process.env.VISITOR_PASSWORD || '',
+    perfil: 'visitor',
+  },
+].filter((usuario) => usuario.senha);
+
+app.use(
+  session({
+    name: 'carometro.sid',
+    secret:
+      process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.COOKIE_SECURE === 'true',
+      maxAge: 8 * 60 * 60 * 1000,
+    },
+  })
+);
+
+function exigirLogin(req, res, next) {
+  if (req.session.usuario) return next();
+  if (req.path.startsWith('/api/'))
+    return res.status(401).json({ erro: 'Faça login para continuar' });
+  res.redirect('/login');
+}
+
+function exigirAdmin(req, res, next) {
+  if (req.session.usuario?.perfil === 'admin') return next();
+  res.status(403).json({ erro: 'Apenas o administrador pode alterar dados' });
+}
+
+function compararSegredos(a, b) {
+  const hashA = crypto.createHash('sha256').update(a).digest();
+  const hashB = crypto.createHash('sha256').update(b).digest();
+  return crypto.timingSafeEqual(hashA, hashB);
+}
+
+const limitarLogin = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+});
+
+app.get('/login', (req, res) => {
+  if (req.session.usuario) return res.redirect('/');
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.get('/login.css', (req, res) =>
+  res.sendFile(path.join(__dirname, 'public', 'login.css'))
+);
+app.get('/login.js', (req, res) =>
+  res.sendFile(path.join(__dirname, 'public', 'login.js'))
+);
+
+app.get(['/', '/index.html'], exigirLogin, (req, res) =>
+  res.sendFile(path.join(__dirname, 'public', 'index.html'))
+);
+app.get('/app.js', exigirLogin, (req, res) =>
+  res.sendFile(path.join(__dirname, 'public', 'app.js'))
+);
+app.get('/style.css', exigirLogin, (req, res) =>
+  res.sendFile(path.join(__dirname, 'public', 'style.css'))
+);
+app.use('/uploads', exigirLogin, express.static(UPLOAD_DIR));
+
+app.get('/api/auth/status', (req, res) => {
+  res.json({ configurado: usuarios.length === 2 });
+});
+
+app.post('/api/auth/login', limitarLogin, async (req, res) => {
+  if (usuarios.length !== 2)
+    return res
+      .status(503)
+      .json({ erro: 'Configure as senhas dos usuários no .env' });
+
+  const nome = String(req.body.usuario || '');
+  const senha = String(req.body.senha || '');
+  const usuario = usuarios.find(
+    (item) =>
+      compararSegredos(item.nome, nome) && compararSegredos(item.senha, senha)
+  );
+  if (!usuario)
+    return res.status(401).json({ erro: 'Usuário ou senha inválidos' });
+
+  try {
+    await new Promise((resolve, reject) => {
+      req.session.regenerate((err) => (err ? reject(err) : resolve()));
+    });
+    req.session.usuario = { nome: usuario.nome, perfil: usuario.perfil };
+    res.json({ usuario: req.session.usuario });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erro: 'Não foi possível iniciar a sessão' });
+  }
+});
+
+app.get('/api/auth/me', exigirLogin, (req, res) => {
+  res.json({ usuario: req.session.usuario });
+});
+
+app.post('/api/auth/logout', exigirLogin, (req, res) => {
+  req.session.destroy((err) => {
+    if (err) return res.status(500).json({ erro: 'Não foi possível sair' });
+    res.clearCookie('carometro.sid', { httpOnly: true, sameSite: 'lax' });
+    res.status(204).end();
+  });
+});
+
+app.post('/api/fotos', exigirLogin, exigirAdmin, (req, res) => {
   const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(
     String(req.body.imagem || '')
   );
@@ -41,14 +162,10 @@ app.post('/api/fotos', (req, res) => {
   );
 });
 
-app.get('/api/turmas', async (req, res) => {
+app.get('/api/turmas', exigirLogin, async (req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT t.id, t.nome, COUNT(a.id) AS total_alunos
-       FROM turmas t
-       LEFT JOIN alunos a ON a.turma_id = t.id
-       GROUP BY t.id, t.nome
-       ORDER BY t.nome`
+      'SELECT id, nome FROM turmas ORDER BY nome'
     );
     res.json(rows);
   } catch (err) {
@@ -57,7 +174,7 @@ app.get('/api/turmas', async (req, res) => {
   }
 });
 
-app.post('/api/turmas', async (req, res) => {
+app.post('/api/turmas', exigirLogin, exigirAdmin, async (req, res) => {
   const nome = String(req.body.nome || '').trim();
   if (!nome || nome.length > 50)
     return res
@@ -79,7 +196,7 @@ app.post('/api/turmas', async (req, res) => {
   }
 });
 
-app.put('/api/turmas/:id', async (req, res) => {
+app.put('/api/turmas/:id', exigirLogin, exigirAdmin, async (req, res) => {
   const turmaId = Number(req.params.id);
   const nome = String(req.body.nome || '').trim();
   if (!Number.isInteger(turmaId) || turmaId <= 0)
@@ -107,7 +224,7 @@ app.put('/api/turmas/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/turmas/:id', async (req, res) => {
+app.delete('/api/turmas/:id', exigirLogin, exigirAdmin, async (req, res) => {
   const turmaId = Number(req.params.id);
   if (!Number.isInteger(turmaId) || turmaId <= 0)
     return res.status(400).json({ erro: 'Turma inválida' });
@@ -142,7 +259,7 @@ app.delete('/api/turmas/:id', async (req, res) => {
   }
 });
 
-app.get('/api/alunos', async (req, res) => {
+app.get('/api/alunos', exigirLogin, async (req, res) => {
   try {
     const params = [];
     let sql = `SELECT a.id, a.nome, a.email, a.telefone, a.foto_url, a.turma_id, t.nome AS turma
@@ -187,7 +304,7 @@ function erroSql(err, res, msg) {
   res.status(500).json({ erro: msg });
 }
 
-app.post('/api/alunos', async (req, res) => {
+app.post('/api/alunos', exigirLogin, exigirAdmin, async (req, res) => {
   const d = validar(req.body);
   if (!d) return res.status(400).json({ erro: 'Dados inválidos' });
   try {
@@ -198,7 +315,7 @@ app.post('/api/alunos', async (req, res) => {
   }
 });
 
-app.put('/api/alunos/:id', async (req, res) => {
+app.put('/api/alunos/:id', exigirLogin, exigirAdmin, async (req, res) => {
   const d = validar(req.body);
   if (!d) return res.status(400).json({ erro: 'Dados inválidos' });
   try {
@@ -214,7 +331,7 @@ app.put('/api/alunos/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/alunos/:id', async (req, res) => {
+app.delete('/api/alunos/:id', exigirLogin, exigirAdmin, async (req, res) => {
   try {
     const [r] = await pool.query('DELETE FROM alunos WHERE id = ?', [
       Number(req.params.id),

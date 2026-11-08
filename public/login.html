@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Acesso | Carômetro de Alunos</title>
+    <link rel="stylesheet" href="/login.css" />
+  </head>
+  <body>
+    <main class="loginLayout">
+      <section class="loginPanel" aria-labelledby="tituloLogin">
+        <p class="marca">CARÔMETRO DE ALUNOS</p>
+        <h1 id="tituloLogin">Acessar aplicação</h1>
+        <p class="subtitulo">Entre com seu usuário para continuar.</p>
+        <form id="loginForm">
+          <label for="usuario">Usuário</label>
+          <input
+            id="usuario"
+            name="usuario"
+            autocomplete="username"
+            required
+            autofocus
+          />
+          <label for="senha">Senha</label>
+          <input
+            id="senha"
+            name="senha"
+            type="password"
+            autocomplete="current-password"
+            required
+          />
+          <p
+            id="erroLogin"
+            class="erroLogin"
+            role="alert"
+            aria-live="polite"
+          ></p>
+          <button id="entrar" type="submit">Entrar</button>
+        </form>
+      </section>
+      <aside class="loginAccent" aria-hidden="true">
+        <div class="avatarGrid">
+          <span class="avatarTile"><span class="avatarIcon"></span></span>
+          <span class="avatarTile"><span class="avatarIcon"></span></span>
+          <span class="avatarTile"><span class="avatarIcon"></span></span>
+          <span class="avatarTile"><span class="avatarIcon"></span></span>
+          <span class="avatarTile avatarTileSelecionado"
+            ><span class="avatarIcon"></span
+          ></span>
+          <span class="avatarTile"><span class="avatarIcon"></span></span>
+          <span class="avatarTile"><span class="avatarIcon"></span></span>
+          <span class="avatarTile"><span class="avatarIcon"></span></span>
+          <span class="avatarTile"><span class="avatarIcon"></span></span>
+        </div>
+      </aside>
+    </main>
+    <script src="/login.js" defer></script>
+  </body>
+</html>

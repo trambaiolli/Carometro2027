@@ -3,6 +3,7 @@ const tabs = document.getElementById('tabs');
 const busca = document.getElementById('busca');
 let turmaAtual = '';
 let timer;
+let usuarioLogado = null;
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -25,17 +26,19 @@ function card(a) {
     el('div', '', '📞 ' + a.telefone),
     el('div', '', '✉ ' + a.email)
   );
-  const acoes = el('div', 'acoesCard');
-  const ed = el('button', '', 'Editar');
-  ed.onclick = () => abrirForm(a);
-  const ex = el('button', 'excluir', 'Excluir');
-  ex.onclick = async () => {
-    if (!confirm(`Excluir ${a.nome}?`)) return;
-    await fetch('/api/alunos/' + a.id, { method: 'DELETE' });
-    carregarAlunos();
-  };
-  acoes.append(ed, ex);
-  info.append(acoes);
+  if (usuarioLogado?.perfil === 'admin') {
+    const acoes = el('div', 'acoesCard');
+    const ed = el('button', '', 'Editar');
+    ed.onclick = () => abrirForm(a);
+    const ex = el('button', 'excluir', 'Excluir');
+    ex.onclick = async () => {
+      if (!confirm(`Excluir ${a.nome}?`)) return;
+      await fetch('/api/alunos/' + a.id, { method: 'DELETE' });
+      carregarAlunos();
+    };
+    acoes.append(ed, ex);
+    info.append(acoes);
+  }
   c.append(foto, info);
   return c;
 }
@@ -57,8 +60,11 @@ function aba(label, id) {
   b.dataset.turmaId = id;
   b.onclick = () => {
     turmaAtual = id;
-    document.getElementById('editarTurma').hidden = !id;
-    document.getElementById('excluirTurma').hidden = !id;
+    document.getElementById('editarTurma').hidden =
+      !id || usuarioLogado?.perfil !== 'admin';
+    document.getElementById('excluirTurma').hidden =
+      !id || usuarioLogado?.perfil !== 'admin';
+    document.getElementById('imprimirTurma').hidden = !id;
     tabs
       .querySelectorAll('button')
       .forEach((x) => x.classList.toggle('ativo', x === b));
@@ -79,15 +85,16 @@ function atualizarTurmas(turmas) {
     aba('Todas', ''),
     ...turmas.map((t) => aba(t.nome, String(t.id)))
   );
-  document.getElementById('editarTurma').hidden = !turmaAtual;
-  document.getElementById('excluirTurma').hidden = !turmaAtual;
+  document.getElementById('editarTurma').hidden =
+    !turmaAtual || usuarioLogado?.perfil !== 'admin';
+  document.getElementById('excluirTurma').hidden =
+    !turmaAtual || usuarioLogado?.perfil !== 'admin';
+  document.getElementById('imprimirTurma').hidden = !turmaAtual;
 }
 
 const dlg = document.getElementById('dlg');
 const form = document.getElementById('form');
 const erro = document.getElementById('erro');
-const listaTurmasDialog = document.getElementById('listaTurmasDialog');
-const listaTurmas = document.getElementById('listaTurmas');
 let editandoId = null;
 
 const video = document.getElementById('video');
@@ -156,6 +163,7 @@ function abrirForm(a) {
     : 'Novo aluno';
   form.reset();
   erro.textContent = '';
+  if (!a && turmaAtual) form.turma_id.value = turmaAtual;
   if (a) {
     form.nome.value = a.nome;
     form.email.value = a.email;
@@ -187,49 +195,36 @@ form.addEventListener('submit', async (e) => {
 });
 
 document.getElementById('cancelar').onclick = () => dlg.close();
-document.getElementById('fecharListaTurmas').onclick = () =>
-  listaTurmasDialog.close();
-document.getElementById('consultarTurmas').onclick = async () => {
-  try {
-    const resposta = await fetch('/api/turmas');
-    if (!resposta.ok) throw new Error('Erro ao consultar turmas');
-    const turmas = await resposta.json();
-
-    listaTurmas.replaceChildren(
-      ...(turmas.length
-        ? turmas.map((turma) => {
-            const linha = el('tr');
-            const acao = el('td');
-            const abrir = el('button', 'verTurma', 'Ver turma');
-            abrir.type = 'button';
-            abrir.onclick = () => {
-              const botaoAba = [...tabs.querySelectorAll('button')].find(
-                (botao) => botao.dataset.turmaId === String(turma.id)
-              );
-              botaoAba?.click();
-              listaTurmasDialog.close();
-            };
-            acao.append(abrir);
-            linha.append(
-              el('td', '', turma.nome),
-              el('td', 'totalAlunos', String(turma.total_alunos)),
-              acao
-            );
-            return linha;
-          })
-        : [
-            (() => {
-              const linha = el('tr');
-              linha.append(el('td', 'vazio', 'Nenhuma turma cadastrada.'));
-              linha.firstChild.colSpan = 3;
-              return linha;
-            })(),
-          ])
-    );
-    listaTurmasDialog.showModal();
-  } catch (err) {
-    alert(err.message || 'Não foi possível consultar as turmas.');
-  }
+document.getElementById('sair').onclick = async () => {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  window.location.replace('/login');
+};
+document.getElementById('imprimirTurma').onclick = async () => {
+  const turmaSelecionada = tabs.querySelector('button.ativo');
+  if (!turmaAtual || !turmaSelecionada) return;
+  const buscaAnterior = busca.value;
+  busca.value = '';
+  await carregarAlunos();
+  const cabecalho = document.getElementById('cabecalhoImpressao');
+  cabecalho.hidden = false;
+  document.getElementById('tituloImpressao').textContent =
+    turmaSelecionada.textContent;
+  const total = grid.querySelectorAll('.card').length;
+  document.getElementById('totalImpressao').textContent =
+    `${total} ${total === 1 ? 'aluno' : 'alunos'}`;
+  const data = new Date();
+  document.getElementById('dataImpressao').textContent =
+    `Impresso em ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(data)}`;
+  window.addEventListener(
+    'afterprint',
+    () => {
+      cabecalho.hidden = true;
+      busca.value = buscaAnterior;
+      carregarAlunos();
+    },
+    { once: true }
+  );
+  window.print();
 };
 document.getElementById('novo').onclick = () => abrirForm(null);
 document.getElementById('editarTurma').onclick = async (e) => {
@@ -322,6 +317,23 @@ document.getElementById('gerarTurma').onclick = async (e) => {
 };
 
 async function init() {
+  const respostaSessao = await fetch('/api/auth/me');
+  if (!respostaSessao.ok) {
+    window.location.replace('/login');
+    return;
+  }
+  const sessao = await respostaSessao.json();
+  usuarioLogado = sessao.usuario;
+  document.getElementById('usuarioAtual').textContent =
+    usuarioLogado.perfil === 'admin'
+      ? `${usuarioLogado.nome} · Administrador`
+      : `${usuarioLogado.nome} · Visitante`;
+  if (usuarioLogado.perfil !== 'admin') {
+    ['gerarTurma', 'novo'].forEach((id) => {
+      document.getElementById(id).hidden = true;
+    });
+  }
+
   const turmas = await (await fetch('/api/turmas')).json();
   atualizarTurmas(turmas);
   busca.addEventListener('input', () => {

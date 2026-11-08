@@ -7,43 +7,42 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <header>
-      <h1>Carômetro de Alunos</h1>
-      <input
-        id="busca"
-        type="search"
-        placeholder="Buscar aluno por nome, email ou telefone..."
-      />
-      <nav id="tabs"></nav>
-      <div class="acoesTopo">
-        <button id="consultarTurmas">Consultar turmas</button>
-        <button id="gerarTurma">Gerar turma</button>
-        <button id="editarTurma" hidden>Editar nome</button>
-        <button id="excluirTurma" hidden>Excluir turma</button>
-        <button id="novo" class="primario">+ Novo aluno</button>
+    <div class="appShell">
+      <aside class="sidebar">
+        <h1>Carômetro de Alunos</h1>
+        <h2>Turmas</h2>
+        <nav id="tabs" aria-label="Filtrar alunos por turma"></nav>
+      </aside>
+      <div class="areaPrincipal">
+        <header>
+          <input
+            id="busca"
+            type="search"
+            placeholder="Buscar aluno por nome, email ou telefone..."
+          />
+          <div class="acoesTopo">
+            <button id="gerarTurma">Gerar turma</button>
+            <button id="editarTurma" hidden>Editar nome</button>
+            <button id="excluirTurma" hidden>Excluir turma</button>
+            <button id="imprimirTurma" hidden>Imprimir turma</button>
+            <button id="novo" class="primario">+ Novo aluno</button>
+            <div class="contaAtual">
+              <span id="usuarioAtual"></span>
+              <button id="sair" type="button">Sair</button>
+            </div>
+          </div>
+        </header>
+        <section id="cabecalhoImpressao" class="cabecalhoImpressao" hidden>
+          <p>CARÔMETRO DE ALUNOS</p>
+          <h1 id="tituloImpressao"></h1>
+          <div class="detalhesImpressao">
+            <span id="totalImpressao"></span>
+            <time id="dataImpressao"></time>
+          </div>
+        </section>
+        <main id="grid"></main>
       </div>
-    </header>
-    <main id="grid"></main>
-    <dialog id="listaTurmasDialog" class="listaTurmasDialog">
-      <div class="cabecalhoListaTurmas">
-        <h2>Todas as turmas</h2>
-        <button id="fecharListaTurmas" type="button" aria-label="Fechar">
-          Fechar
-        </button>
-      </div>
-      <div class="tabelaTurmas">
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Turma</th>
-              <th scope="col">Alunos</th>
-              <th scope="col"><span class="sr-only">Ação</span></th>
-            </tr>
-          </thead>
-          <tbody id="listaTurmas"></tbody>
-        </table>
-      </div>
-    </dialog>
+    </div>
     <dialog id="dlg">
       <form id="form" method="dialog">
         <h2 id="dlgTitulo"></h2>
