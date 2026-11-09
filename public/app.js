@@ -116,10 +116,27 @@ function mostrarPreview(url) {
 
 document.getElementById('abrirCam').onclick = async () => {
   erro.textContent = '';
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+    erro.textContent =
+      'A câmera exige conexão segura (HTTPS). Use o endereço HTTPS do servidor ou acesse por localhost.';
+    return;
+  }
+
   try {
     stream = await navigator.mediaDevices.getUserMedia({ video: true });
-  } catch {
-    erro.textContent = 'Não foi possível acessar a câmera.';
+  } catch (error) {
+    const mensagens = {
+      NotAllowedError:
+        'Permita o acesso à câmera nas configurações do navegador e do dispositivo.',
+      NotFoundError: 'Nenhuma câmera foi encontrada neste dispositivo.',
+      NotReadableError:
+        'A câmera está em uso por outro aplicativo ou não pode ser iniciada.',
+      SecurityError:
+        'O navegador bloqueou a câmera. Acesse o servidor por uma conexão HTTPS.',
+    };
+    erro.textContent =
+      mensagens[error.name] ||
+      'Não foi possível iniciar a câmera neste navegador.';
     return;
   }
   video.srcObject = stream;
