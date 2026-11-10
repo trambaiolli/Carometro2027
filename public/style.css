@@ -21,8 +21,32 @@ body {
   background: #fff;
 }
 .sidebar h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 0 0 32px;
   font-size: 20px;
+}
+.sidebarLogo {
+  width: 42px;
+  height: 42px;
+  flex: none;
+}
+.sidebarBrandName,
+.sidebarBrandSubtitle {
+  display: block;
+}
+.sidebarBrandName {
+  color: #1e1e2f;
+  font-size: 17px;
+  font-weight: 800;
+}
+.sidebarBrandSubtitle {
+  margin-top: 2px;
+  color: #2f73bd;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 .sidebar h2 {
   margin: 0 0 10px;

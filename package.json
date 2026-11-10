@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
+    "cert:dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/create-dev-certificate.ps1",
     "start": "node server.js"
   },
   "dependencies": {

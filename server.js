@@ -1,4 +1,5 @@
 require('dotenv').config();
+const https = require('https');
 const express = require('express');
 const mysql = require('mysql2/promise');
 const path = require('path');
@@ -46,7 +47,7 @@ app.use(
     cookie: {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.COOKIE_SECURE === 'true',
+      secure: true,
       maxAge: 8 * 60 * 60 * 1000,
     },
   })
@@ -82,6 +83,12 @@ app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
+app.get('/logo.svg', (req, res) =>
+  res.sendFile(path.join(__dirname, 'public', 'logo.svg'))
+);
+app.get('/students.svg', (req, res) =>
+  res.sendFile(path.join(__dirname, 'public', 'students.svg'))
+);
 app.get('/login.css', (req, res) =>
   res.sendFile(path.join(__dirname, 'public', 'login.css'))
 );
@@ -345,4 +352,25 @@ app.delete('/api/alunos/:id', exigirLogin, exigirAdmin, async (req, res) => {
 });
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`Carômetro em http://localhost:${port}`));
+const pfxPath = path.resolve(
+  __dirname,
+  process.env.TLS_PFX_PATH || 'certs/localhost.pfx'
+);
+const tlsOptions = { pfx: fs.readFileSync(pfxPath) };
+const localPassphrasePath = path.join(
+  __dirname,
+  'certs',
+  'localhost.passphrase'
+);
+const passphrase =
+  process.env.TLS_PFX_PASSPHRASE ||
+  (fs.existsSync(localPassphrasePath)
+    ? fs.readFileSync(localPassphrasePath, 'utf8').trim()
+    : '');
+if (passphrase) {
+  tlsOptions.passphrase = passphrase;
+}
+
+https.createServer(tlsOptions, app).listen(port, () => {
+  console.log(`Carômetro em https://localhost:${port}`);
+});

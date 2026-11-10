@@ -1,0 +1,6 @@
+.env
+.env.*
+!.env.example
+node_modules/
+certs/*.pfx
+certs/*.passphrase

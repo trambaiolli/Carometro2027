@@ -27,11 +27,32 @@ body {
   justify-self: center;
   padding: 48px;
 }
-.marca {
-  margin: 0 0 28px;
-  color: #5b4bdb;
-  font-size: 11px;
+.brandLockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 30px;
+}
+.brandLogo {
+  width: 52px;
+  height: 52px;
+  flex: none;
+}
+.brandName,
+.brandDescriptor {
+  display: block;
+}
+.brandName {
+  color: #1e1e2f;
+  font-size: 16px;
+  font-weight: 800;
+}
+.brandDescriptor {
+  margin-top: 3px;
+  color: #2f73bd;
+  font-size: 10px;
   font-weight: 700;
+  text-transform: uppercase;
 }
 h1 {
   margin: 0 0 8px;
@@ -87,57 +108,17 @@ button:disabled {
 .loginAccent {
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
   gap: 0;
   padding: 28px 20px;
   background: #f0f5fc;
 }
-.avatarGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 44px);
-  gap: 8px;
-  justify-content: center;
-}
-.avatarTile {
-  display: grid;
-  width: 44px;
-  aspect-ratio: 1;
-  place-items: center;
-  border-radius: 11px;
-  background: #d9e8fb;
-}
-.avatarTileSelecionado {
-  background: #2f73bd;
-}
-.avatarIcon {
-  position: relative;
+.loginStudentsIllustration {
   display: block;
-  width: 26px;
-  height: 30px;
-  color: #2f73bd;
-}
-.avatarIcon::before,
-.avatarIcon::after {
-  position: absolute;
-  left: 50%;
-  content: '';
-  background: currentColor;
-  transform: translateX(-50%);
-}
-.avatarIcon::before {
-  top: 0;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-}
-.avatarIcon::after {
-  bottom: 0;
-  width: 23px;
-  height: 13px;
-  border-radius: 13px 13px 4px 4px;
-}
-.avatarTileSelecionado .avatarIcon {
-  color: #fff;
+  width: 220px;
+  max-width: 100%;
+  height: auto;
 }
 @media (max-width: 600px) {
   .loginLayout {
@@ -149,5 +130,8 @@ button:disabled {
   }
   .loginAccent {
     padding: 20px 24px;
+  }
+  .loginStudentsIllustration {
+    width: 180px;
   }
 }
